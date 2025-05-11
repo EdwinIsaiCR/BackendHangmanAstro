@@ -10,6 +10,3 @@ pnpm-debug.log*
 # environment variables
 .env
 .env.production
-
-# jetbrains setting folder
-.idea/
