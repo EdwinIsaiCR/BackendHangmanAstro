@@ -11,7 +11,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors()); // Habilitar CORS para el frontend
+app.use(cors({
+  origin: ['https://hangman-astro.vercel.app', 'http://localhost:3000']
+}));
 app.use(express.json()); // Para parsear JSON en el body
 
 // Importar rutas
