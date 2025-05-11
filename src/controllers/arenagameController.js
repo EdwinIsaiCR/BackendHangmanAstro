@@ -75,6 +75,8 @@ exports.obtenerTablaGeneral = async (req, res) => {
     const tabla = await db.query(
       "SELECT * FROM arenagame ORDER by score DESC, totaltime ASC"
     );
+
+    console.log(tabla);
     
     if (tabla.length > 0) {
       return res.status(200).json(tabla);
@@ -82,7 +84,8 @@ exports.obtenerTablaGeneral = async (req, res) => {
       return res.status(404).json([{ success: 0 }]);
     }
   } catch (error) {
-    console.error('Error al obtener tabla general:', error);
+    console.error('Error en tablaGeneral:', error.message);
+    console.error(error.stack);
     return res.status(500).json({ 
       success: 0, 
       message: 'Error al obtener tabla general' 
