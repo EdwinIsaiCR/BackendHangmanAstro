@@ -26,18 +26,21 @@ exports.nuevoJuego = async (req, res) => {
   try {
     const { nombre } = req.body;
     
+    // Consulta actualizada que incluye totaltime con valor 0
     await db.query(
       `INSERT INTO arenagame(
         player, 
         score, 
         giveup, 
-        timestampstart
-      ) VALUES(?, 0, 0, CURRENT_TIMESTAMP)`, 
+        timestampstart,
+        totaltime
+      ) VALUES(?, 0, 0, CURRENT_TIMESTAMP, 0)`, 
       [nombre]
     );
     
+    // Obtener el juego recién creado de manera más eficiente
     const [juego] = await db.query(
-      "SELECT * FROM arenagame WHERE id = LAST_INSERT_ID()"
+      "SELECT * FROM arenagame ORDER BY id DESC LIMIT 1"
     );
     
     return res.status(200).json(juego[0]);
@@ -46,7 +49,8 @@ exports.nuevoJuego = async (req, res) => {
     return res.status(500).json({ 
       success: 0,
       message: 'Error al crear nuevo juego',
-      error: error.message
+      error: error.message,
+      sql: error.sql  // Para debugging adicional
     });
   }
 },
