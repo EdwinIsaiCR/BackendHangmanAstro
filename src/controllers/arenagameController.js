@@ -26,18 +26,31 @@ exports.nuevoJuego = async (req, res) => {
   try {
     const { nombre } = req.body;
     
-    // Insertar el nuevo jugador
-    await db.query("INSERT INTO arenagame(player) VALUES(?)", [nombre]);
+    // Insertar con valores por defecto para todos los campos requeridos
+    await db.query(
+      `INSERT INTO arenagame(
+        player, 
+        score, 
+        giveup, 
+        timestampstart, 
+        timestampend, 
+        totaltime
+      ) VALUES(?, 0, 0, CURRENT_TIMESTAMP, NULL, NULL)`, 
+      [nombre]
+    );
     
     // Obtener el juego recién creado
-    const juego = await db.query("SELECT * FROM arenagame WHERE id = (SELECT MAX(id) FROM arenagame)");
+    const [juego] = await db.query(
+      "SELECT * FROM arenagame WHERE id = LAST_INSERT_ID()"
+    );
     
-    return res.status(200).json(juego);
+    return res.status(200).json(juego[0]); // Devuelve el primer registro
   } catch (error) {
     console.error('Error al crear nuevo juego:', error);
     return res.status(500).json({ 
       success: 0, 
-      message: 'Error al crear nuevo juego' 
+      message: 'Error al crear nuevo juego',
+      error: error.message
     });
   }
 },
