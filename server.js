@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: ['https://hangman-astro.vercel.app', 'http://localhost:3000']
+  origin: ['https://hangman-astro.vercel.app', 'http://localhost:4321']
 }));
 app.use(express.json()); // Para parsear JSON en el body
 
