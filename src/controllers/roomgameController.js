@@ -48,8 +48,8 @@ exports.newGame = async(req, res) => {
         }
 
         // Insert new game room entry
-        const insertQuery = "INSERT INTO gameroom (user_id, room_id) VALUES (?, ?)";
-        const insertValues = [userid, roomid];
+        const insertQuery = "INSERT INTO gameroom (user_id, room_id, status) VALUES (?, ?, ?)";
+        const insertValues = [userid, roomid, 0];
         await db.query(insertQuery, insertValues);
 
         // Get the created game room entry
