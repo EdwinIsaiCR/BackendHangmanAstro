@@ -302,11 +302,11 @@ exports.deleteList = async (req, res) => {
         }
 
         // Verificar uso en listas
-        const [listWords] = await db.query(`
+        const listWords = await db.query(`
             SELECT l.id, l.listname 
             FROM lists l
             JOIN list_has_word lhw ON l.id = lhw.list_id
-            WHERE lhw.word_id = ? AND l.isactive = 1
+            WHERE lhw.word_id = ?
         `, [wordId]);
 
         res.json({ 
