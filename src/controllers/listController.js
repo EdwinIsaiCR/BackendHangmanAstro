@@ -2,24 +2,34 @@
 const db = require('../config/db');
 
 exports.getAllLists = async (req, res) => {
-    const userId = req.query.userId;
-    try {
-      const rows = await db.query('SELECT * FROM lists WHERE user_id = ?', [userId]);
-      
-      res.json({
+  const userId = req.query.userId;
+  try {
+    const rows = await db.query('SELECT * FROM lists WHERE user_id = ?', [userId]);
+    
+    // Mejor respuesta cuando no hay listas
+    if (rows.length === 0) {
+      return res.json({
         success: true,
-        count: rows.length,
-        data: rows
-      });
-    } catch (error) {
-      console.error('Error al obtener listas:', error);
-      return res.status(500).json({ 
-        success: 0,
-        message: 'Error al obtener listas',
-        error: error.message 
+        count: 0,
+        message: 'No hay listas disponibles para este usuario',
+        data: []
       });
     }
-},
+    
+    res.json({
+      success: true,
+      count: rows.length,
+      data: rows
+    });
+  } catch (error) {
+    console.error('Error al obtener listas:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: 'Error al obtener listas',
+      error: error.message 
+    });
+  }
+}
 
 exports.getAllListsIds = async (req, res) => {
     const listId = req.query.listId;
