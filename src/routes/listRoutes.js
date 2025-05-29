@@ -12,5 +12,6 @@ router.post('/words', listController.addWords);
 router.post('/', listController.createList);
 router.put('/', listController.updateList);
 router.delete('/:id', listController.deleteList);
+router.get('/checkWord', listController.checkWord);
 
 module.exports = router;

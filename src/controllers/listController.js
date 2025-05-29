@@ -288,3 +288,42 @@ exports.deleteList = async (req, res) => {
       });
     }
   }
+
+  exports.checkWord = async (req, res) => {
+    try {
+        const wordId = req.query.wordId;
+        
+        // Validar ID
+        if (!wordId || isNaN(wordId)) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'ID de palabra inválido' 
+            });
+        }
+
+        // Verificar uso en listas
+        const [listWords] = await db.query(`
+            SELECT l.id, l.listname 
+            FROM lists l
+            JOIN list_has_word lhw ON l.id = lhw.list_id
+            WHERE lhw.word_id = ? AND l.isactive = 1
+        `, [wordId]);
+
+        res.json({ 
+            success: true,
+            inUse: listWords.length > 0,
+            usageCount: listWords.length,
+            lists: listWords, // Listas que contienen esta palabra
+            message: listWords.length > 0
+                ? 'La palabra está siendo usada en listas'
+                : 'La palabra no está en uso'
+        });
+
+    } catch (error) {
+        console.error('Error al verificar palabra:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Error interno al verificar palabra' 
+        });
+    }
+}

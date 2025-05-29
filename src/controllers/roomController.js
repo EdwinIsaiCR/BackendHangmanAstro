@@ -475,6 +475,43 @@ exports.checkRoom = async (req, res) => {
   }
 }
 
+exports.checkList = async (req, res) => {
+  try {
+      const listId = req.query.listId;
+      
+      // Validar ID
+      if (!listId || isNaN(listId)) {
+          return res.status(400).json({ 
+              success: false,
+              message: 'ID de lista inválido' 
+          });
+      }
+
+      // Verificar uso en salas
+      const [rooms] = await db.query(
+          'SELECT id, roomname FROM rooms WHERE lists_id = ? AND isactive = 1',
+          [listId]
+      );
+
+      res.json({ 
+          success: true,
+          inUse: rooms.length > 0,
+          usageCount: rooms.length,
+          rooms: rooms, // Lista de salas que usan esta lista
+          message: rooms.length > 0 
+              ? 'La lista está siendo usada en salas' 
+              : 'La lista no está en uso'
+      });
+
+  } catch (error) {
+      console.error('Error al verificar lista:', error);
+      res.status(500).json({ 
+          success: false,
+          message: 'Error interno al verificar lista' 
+      });
+  }
+}
+
 exports.addWords = async (req, res) => {
   let connection;
   try {

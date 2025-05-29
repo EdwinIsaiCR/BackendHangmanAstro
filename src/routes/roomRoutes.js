@@ -11,6 +11,7 @@ router.put('/', roomController.updateRoom);
 router.delete('/:id', roomController.deleteRoom);
 router.get('/checkCode', roomController.checkCode);
 router.post('/check', roomController.checkRoom);
+router.get('/checkList', roomController.checkList);
 router.post('/words', roomController.addWords);
 router.delete('/words/:roomId', roomController.deleteWords);
 router.get('/:roomId/players', roomController.getPlayers);
