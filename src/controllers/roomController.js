@@ -488,7 +488,7 @@ exports.checkList = async (req, res) => {
       }
 
       // Verificar uso en salas
-      const [rooms] = await db.query(
+      const rooms = await db.query(
           'SELECT id, roomname FROM room WHERE lists_id = ?',
           [listId]
       );
