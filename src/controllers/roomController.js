@@ -284,7 +284,7 @@ exports.checkRoom = async (req, res) => {
     const { roomcode, userId } = req.body;
 
     const room = await db.query(
-      'SELECT id, isopen FROM room WHERE roomcode = ?', 
+      'SELECT id, isopen, hasstartdatetime, startdatetime, hasenddatetime, enddatetime FROM room WHERE roomcode = ?', 
       [roomcode]
     );
 
@@ -295,9 +295,12 @@ exports.checkRoom = async (req, res) => {
       });
     }
 
-    const roomId = room[0].id;
+    const roomData = room[0];
+    const roomId = roomData.id;
+    const now = new Date();
 
-    if (!room[0].isopen) {
+    // Verificar si la sala está cerrada
+    if (!roomData.isopen) {
       return res.json({ 
         success: false,
         canJoin: false,
@@ -305,6 +308,33 @@ exports.checkRoom = async (req, res) => {
       });
     }
 
+    // Verificar horario de inicio si está configurado
+    if (roomData.hasstartdatetime && roomData.startdatetime) {
+      const startTime = new Date(roomData.startdatetime);
+      if (now < startTime) {
+        return res.json({ 
+          success: false,
+          canJoin: false,
+          startdatetime: roomData.startdatetime,
+          message: `La sala no está disponible aún. Se abrirá el ${startTime.toLocaleString()}`
+        });
+      }
+    }
+
+    // Verificar horario de cierre si está configurado
+    if (roomData.hasenddatetime && roomData.enddatetime) {
+      const endTime = new Date(roomData.enddatetime);
+      if (now > endTime) {
+        return res.json({ 
+          success: false,
+          canJoin: false,
+          enddatetime: roomData.enddatetime,
+          message: `La sala ya cerró. El período terminó el ${endTime.toLocaleString()}`
+        });
+      }
+    }
+
+    // Verificar si la sala tiene palabras
     const words = await db.query(
       'SELECT word_id FROM room_has_word WHERE room_id = ?',
       [roomId]
@@ -318,20 +348,7 @@ exports.checkRoom = async (req, res) => {
       });
     }
 
-    // 4. Verificar si el usuario ya está en la sala (opcional)
-    /*const userInRoom = await db.query(
-      'SELECT id FROM gameroom WHERE room_id = ? AND user_id = ?',
-      [roomId, userId]
-    );
-
-    if (userInRoom.length > 0) {
-      return res.json({ 
-        success: false,
-        canJoin: false,
-        message: 'Ya estás en esta sala' 
-      });
-    }
-    */
+    // Si pasa todas las validaciones, permitir unirse
     res.json({ 
       success: true,
       canJoin: true,
