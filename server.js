@@ -13,13 +13,12 @@ app.use(express.json());
 app.use(cors({
   origin: [
     'https://hangman-astro.vercel.app', 
-    'http://localhost:4321',
-    'https://hangman-astro.vercel.app'
+    'http://localhost:4321'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'Origin', 'X-Requested-With', 'Accept'],
-  exposedHeaders: ['Set-Cookie', 'Date', 'ETag']
+  exposedHeaders: ['set-Cookie']
 }));
 
 app.use((req, res, next) => {
@@ -41,13 +40,15 @@ const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'brains908',
   resave: false,
   saveUninitialized: false,
-  name: 'hangman.sid', // Cambia el nombre de la cookie
+  name: 'hangman.sid',
   cookie: {
-    secure: false, // false en desarrollo, true en producción
+    secure: true, // Siempre true en Railway (HTTPS)
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
-    sameSite: 'lax', // 'lax' en desarrollo, 'none' en producción
-    // domain: undefined // No establecer domain en desarrollo
+    sameSite: 'none', // Necesario para cross-site
+    domain: process.env.NODE_ENV === 'production' 
+      ? '.up.railway.app' // Dominio principal
+      : undefined // Localhost
   }
 };
 
