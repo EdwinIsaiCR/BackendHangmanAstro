@@ -22,10 +22,9 @@ exports.getRoomByCode = async(req, res) => {
             });
         }
 
-        // Devolver solo el primer resultado, no un array
         res.json({
             success: true,
-            data: rows[0] // Devuelve directamente el objeto
+            data: rows[0]
         });
     } catch(error) {
         console.error("Error getting room by code:", error);
@@ -47,12 +46,9 @@ exports.newGame = async(req, res) => {
             });
         }
 
-        // Insert new game room entry
         const insertQuery = "INSERT INTO gameroom (user_id, room_id, status) VALUES (?, ?, ?)";
         const insertValues = [userid, roomid, 0];
         await db.query(insertQuery, insertValues);
-
-        // Get the created game room entry
         const selectQuery = "SELECT * FROM gameroom WHERE room_id = ? AND user_id = ? ORDER BY id DESC";
         const selectValues = [roomid, userid];
         const rows = await db.query(selectQuery, selectValues);
@@ -77,7 +73,6 @@ exports.newGame = async(req, res) => {
     }
 }
 
-// Add game detail (word attempt)
 exports.addGameDetail = async(req, res) => {
     try {
         const { 
@@ -98,14 +93,12 @@ exports.addGameDetail = async(req, res) => {
             });
         }
 
-        // Insert game detail
         const insertDetailQuery = `INSERT INTO detailgameroom 
             (gameroom_id, word_id, guessed, typecorrect, pastcorrect, timeperword, pointsperword) 
             VALUES (?, ?, ?, ?, ?, ?, ?)`;
         const insertDetailValues = [gameroomid, wordid, verbAdivinado, tipo, pasado, timeperword, puntos];
         await db.query(insertDetailQuery, insertDetailValues);
 
-        // Get current word statistics
         const selectWordQuery = "SELECT * FROM room_has_word WHERE word_id = ? AND room_id = ?";
         const selectWordValues = [wordid, roomid];
         const wordRows = await db.query(selectWordQuery, selectWordValues);
@@ -117,7 +110,6 @@ exports.addGameDetail = async(req, res) => {
             const tipoFail = wordData.typefails + (tipo == 1 ? 0 : 1);
             const pasadoFail = wordData.pastfails + (pasado == 1 ? 0 : 1);
 
-            // Update word statistics
             const updateWordQuery = `UPDATE room_has_word 
                 SET used = ?, guessed = ?, typefails = ?, pastfails = ? 
                 WHERE word_id = ? AND room_id = ?`;
@@ -138,7 +130,6 @@ exports.addGameDetail = async(req, res) => {
     }
 }
 
-// Finish game
 exports.finishGame = async(req, res) => {
     try {
         const { userid, idgr, puntos, rindio, status } = req.body;
@@ -150,7 +141,6 @@ exports.finishGame = async(req, res) => {
             });
         }
 
-        // Update game room with final data
         const updateGameQuery = `UPDATE gameroom 
             SET score = ?, timestampend = CURRENT_TIMESTAMP, 
                 totaltime = TIMEDIFF(timestampend, timestampstart), status = ? 
@@ -158,7 +148,6 @@ exports.finishGame = async(req, res) => {
         const updateGameValues = [puntos, status, idgr];
         await db.query(updateGameQuery, updateGameValues);
 
-        // Get user's current total time played
         const getUserTimeQuery = "SELECT SEC_TO_TIME(SUM(TIME_TO_SEC(hrsjugadas))) AS totaltime FROM users WHERE id = ?";
         const getUserTimeValues = [userid];
         const userTimeRows = await db.query(getUserTimeQuery, getUserTimeValues);
@@ -168,7 +157,6 @@ exports.finishGame = async(req, res) => {
             hrsgrd = userTimeRows[0].totaltime || '00:00:00';
         }
 
-        // Get game time for this session
         const getGameTimeQuery = "SELECT SEC_TO_TIME(SUM(TIME_TO_SEC(totaltime))) AS gameTime FROM gameroom WHERE id = ?";
         const getGameTimeValues = [idgr];
         const gameTimeRows = await db.query(getGameTimeQuery, getGameTimeValues);
@@ -178,7 +166,6 @@ exports.finishGame = async(req, res) => {
             hrsjged = gameTimeRows[0].gameTime || '00:00:00';
         }
 
-        // Update user's total time played
         const updateUserTimeQuery = "UPDATE users SET hrsjugadas = ADDTIME(?, ?) WHERE id = ?";
         const updateUserTimeValues = [hrsgrd, hrsjged, userid];
         await db.query(updateUserTimeQuery, updateUserTimeValues);
@@ -196,7 +183,6 @@ exports.finishGame = async(req, res) => {
     }
 }
 
-// Get room leaderboard
 exports.getRoomLeaderboard = async(req, res) => {
     try {
         const { idrm } = req.body;

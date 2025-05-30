@@ -1,7 +1,5 @@
-// backend/src/controllers/authController.js
 const db = require('../config/db');
 
-// Función de login
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -45,76 +43,6 @@ exports.login = async (req, res) => {
   }
 };
 
-// Función para cerrar sesión
-// Función de logout CON VALIDACIÓN
-exports.logout = (req, res) => {
-    console.log('=== LOGOUT CON VALIDACIÓN ===');
-    console.log('Session ID:', req.sessionID);
-    console.log('User ID:', req.session.userId);
-    console.log('Cookies recibidas:', req.headers.cookie);
-    console.log('Headers completos:', JSON.stringify(req.headers, null, 2));
-    
-    // VALIDAR QUE TENEMOS UNA SESIÓN ACTIVA
-    if (!req.session || !req.session.userId) {
-      console.log('⚠️  No hay sesión activa para cerrar');
-      return res.json({ 
-        success: false, 
-        message: 'No hay sesión activa',
-        debug: {
-          sessionExists: !!req.session,
-          userId: req.session?.userId,
-          sessionId: req.sessionID
-        }
-      });
-    }
-    
-    const userIdToLogout = req.session.userId;
-    console.log(`🔓 Cerrando sesión para usuario: ${userIdToLogout}`);
-    
-    // Método 1: Limpiar datos manualmente
-    req.session.userId = null;
-    req.session.userRole = null;
-    
-    // Método 2: Destruir sesión
-    req.session.destroy((err) => {
-      if (err) {
-        console.error('❌ Error al destruir sesión:', err);
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Error al cerrar sesión' 
-        });
-      }
-      
-      // Método 3: Limpiar cookie
-      const cookieOptions = {
-        path: '/',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-      };
-      
-      res.clearCookie('connect.sid', cookieOptions);
-      res.clearCookie('connect.sid'); // También sin opciones
-      
-      console.log(`✅ Sesión cerrada exitosamente para usuario: ${userIdToLogout}`);
-      res.json({ 
-        success: true, 
-        message: 'Sesión cerrada correctamente',
-        loggedOutUserId: userIdToLogout
-      });
-    });
-  };
-  
-
-// Middleware para verificar si el usuario está autenticado
-exports.isAuthenticated = (req, res, next) => {
-  if (req.session.userId) {
-    next();
-  } else {
-    res.status(401).json({ success: false, message: 'Usuario no autenticado' });
-  }
-};
-
 exports.register = async (req, res) => {
     try {
         const { email, name, lastname, school, password, rol } = req.body;
@@ -138,13 +66,10 @@ exports.register = async (req, res) => {
         }
 
         // 2. Insertar nuevo usuario
-        console.log("Intentando registrar usuario:", email);
         const result = await db.query(
             'INSERT INTO users (email, password, name, lastname, school, roles_id) VALUES (?, ?, ?, ?, ?, ?)',
             [email, password, name, lastname, school, rol]
         );
-
-        console.log("Resultado de inserción:", JSON.stringify(result));
         
         // Intentar obtener el ID del usuario recién insertado
         let userId;
@@ -156,7 +81,6 @@ exports.register = async (req, res) => {
             userId = result.insertId;
         } else {
             // Si no se puede obtener el ID de insertId, buscar por email
-            console.log("No se pudo obtener insertId, buscando por email");
             const newUser = await db.query(
                 'SELECT id FROM users WHERE email = ? LIMIT 1',
                 [email]
@@ -189,6 +113,64 @@ exports.register = async (req, res) => {
             message: 'Error en el servidor: ' + error.message
         });
     }
+};
+
+exports.logout = (req, res) => {
+  console.log('=== LOGOUT CON VALIDACIÓN ===');
+  console.log('Session ID:', req.sessionID);
+  console.log('User ID:', req.session.userId);
+  console.log('Cookies recibidas:', req.headers.cookie);
+  console.log('Headers completos:', JSON.stringify(req.headers, null, 2));
+  
+  // VALIDAR QUE TENEMOS UNA SESIÓN ACTIVA
+  if (!req.session || !req.session.userId) {
+    console.log('⚠️  No hay sesión activa para cerrar');
+    return res.json({ 
+      success: false, 
+      message: 'No hay sesión activa',
+      debug: {
+        sessionExists: !!req.session,
+        userId: req.session?.userId,
+        sessionId: req.sessionID
+      }
+    });
+  }
+  
+  const userIdToLogout = req.session.userId;
+  console.log(`🔓 Cerrando sesión para usuario: ${userIdToLogout}`);
+  
+  // Método 1: Limpiar datos manualmente
+  req.session.userId = null;
+  req.session.userRole = null;
+  
+  // Método 2: Destruir sesión
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('❌ Error al destruir sesión:', err);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Error al cerrar sesión' 
+      });
+    }
+    
+    // Método 3: Limpiar cookie
+    const cookieOptions = {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    };
+    
+    res.clearCookie('connect.sid', cookieOptions);
+    res.clearCookie('connect.sid'); // También sin opciones
+    
+    console.log(`✅ Sesión cerrada exitosamente para usuario: ${userIdToLogout}`);
+    res.json({ 
+      success: true, 
+      message: 'Sesión cerrada correctamente',
+      loggedOutUserId: userIdToLogout
+    });
+  });
 };
 
 exports.forgot = async (req, res) => {

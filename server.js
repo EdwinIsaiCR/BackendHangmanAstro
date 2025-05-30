@@ -1,28 +1,22 @@
-// backend/server.js - Archivo principal del servidor
-
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const session = require('express-session');
 
-// Cargar variables de entorno
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(express.json());
-// En server.js - CORS configurado correctamente
 app.use(cors({
   origin: ['https://hangman-astro.vercel.app', 'http://localhost:4321'],
-  credentials: true, // ESTO ES CRUCIAL
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   exposedHeaders: ['Set-Cookie']
 }));
 
-// Middleware adicional para debugging de cookies
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   console.log('Headers recibidos:', {
@@ -38,7 +32,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Configuración de sesión (sin cambios pero con más debug)
 const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'brains908',
   resave: false,
@@ -57,7 +50,6 @@ const sessionConfig = {
 
 app.use(session(sessionConfig));
 
-// Check session CON MÁS LOGS
 app.get('/api/check-session', (req, res) => {
   console.log('=== CHECK SESSION ===');
   console.log('Session ID:', req.sessionID);
@@ -72,17 +64,16 @@ app.get('/api/check-session', (req, res) => {
       isLoggedIn: true,
       userId: req.session.userId,
       userRole: req.session.userRole,
-      sessionId: req.sessionID // Para debugging
+      sessionId: req.sessionID
     });
   } else {
     res.json({ 
       isLoggedIn: false,
-      sessionId: req.sessionID // Para debugging
+      sessionId: req.sessionID
     });
   }
 });
 
-// Importar rutas
 const userRoutes = require('./src/routes/userRoutes');
 const wordRoutes = require('./src/routes/wordRoutes');
 const arenagameRoutes = require('./src/routes/arenagameRoutes');

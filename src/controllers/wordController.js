@@ -1,9 +1,7 @@
-// controllers/wordController.js
 const db = require('../config/db');
 
 exports.getAllWords = async (req, res) => {
   try {
-    console.log("Query params recibidos:", req.query); // Debug
     
     const userId = req.query.userId;
     
@@ -11,7 +9,6 @@ exports.getAllWords = async (req, res) => {
       return res.status(400).json({ error: "Se requiere userId" });
     }
 
-    // Ejemplo de consulta - ajusta según tu esquema de BD
     const query = `
       SELECT * FROM words 
       WHERE user_id = ? 
@@ -32,7 +29,6 @@ exports.getAllWords = async (req, res) => {
 
 exports.getAllWordsIds = async (req, res) => {
   try {
-    console.log("Query params recibidos:", req.query); // Debug
     
     const userId = req.query.userId;
     
@@ -40,7 +36,6 @@ exports.getAllWordsIds = async (req, res) => {
       return res.status(400).json({ error: "Se requiere userId" });
     }
 
-    // Ejemplo de consulta - ajusta según tu esquema de BD
     const query = `
       SELECT id FROM words 
       WHERE user_id = ? 
@@ -61,7 +56,6 @@ exports.getAllWordsIds = async (req, res) => {
 
 exports.getWordById = async (req, res) => {
   try {
-    console.log("Query params recibidos:", req.query); // Debug
     
     const wordId = req.query.wordId;
     
@@ -69,7 +63,6 @@ exports.getWordById = async (req, res) => {
       return res.status(400).json({ error: "Se requiere wordId" });
     }
 
-    // Ejemplo de consulta - ajusta según tu esquema de BD
     const query = `
       SELECT * FROM words 
       WHERE id = ? 
@@ -88,10 +81,102 @@ exports.getWordById = async (req, res) => {
   }
 };
 
-  // Obtener palabras por room_id (equivalente a wrdRoomLeer)
-  exports.getWordsByRoom = async (req, res) => {
+exports.failsType = async (req, res) => {
+  try {
+      const { roomId } = req.params;
+      
+      if (!roomId) {
+          return res.status(400).json({ 
+              success: 0,
+              message: 'Se requiere el ID de la sala' 
+          });
+      }
+
+      const result = await db.query(
+          'SELECT words.*, room_has_word.typefails FROM words JOIN room_has_word ON words.id = room_has_word.word_id WHERE room_has_word.room_id = ? ORDER BY room_has_word.typefails DESC',
+          [roomId]
+      );
+      
+      if (result.length > 0) {
+          return res.status(200).json(result);
+      } else {
+          return res.status(200).json([]); 
+      }
+  } catch (error) {
+      console.error('Error al obtener palabras por sala:', error);
+      return res.status(500).json({ 
+          success: 0,
+          message: 'Error al obtener palabras por sala',
+          error: error.message 
+      });
+  }
+};
+
+exports.failsPast = async (req, res) => {
+  try {
+      const { roomId } = req.params;
+      
+      if (!roomId) {
+          return res.status(400).json({ 
+              success: 0,
+              message: 'Se requiere el ID de la sala' 
+          });
+      }
+
+      const result = await db.query(
+          'SELECT words.*, room_has_word.pastfails FROM words JOIN room_has_word ON words.id = room_has_word.word_id WHERE room_has_word.room_id = ? ORDER BY room_has_word.pastfails DESC',
+          [roomId]
+      );
+      
+      if (result.length > 0) {
+          return res.status(200).json(result);
+      } else {
+          return res.status(200).json([]); 
+      }
+  } catch (error) {
+      console.error('Error al obtener palabras por sala:', error);
+      return res.status(500).json({ 
+          success: 0,
+          message: 'Error al obtener palabras por sala',
+          error: error.message 
+      });
+  }
+};
+
+exports.getInactiveWords = async (req, res) => {
+  try {
+      const { roomId } = req.params;
+      
+      if (!roomId) {
+          return res.status(400).json({ 
+              success: 0,
+              message: 'Se requiere el ID de la sala' 
+          });
+      }
+
+      const result = await db.query(
+          'SELECT words.*, room_has_word.used FROM words JOIN room_has_word ON words.id = room_has_word.word_id WHERE room_has_word.room_id = ? ORDER BY room_has_word.used ASC',
+          [roomId]
+      );
+      
+      if (result.length > 0) {
+          return res.status(200).json(result);
+      } else {
+          return res.status(200).json([]); 
+      }
+  } catch (error) {
+      console.error('Error al obtener palabras por sala:', error);
+      return res.status(500).json({ 
+          success: 0,
+          message: 'Error al obtener palabras por sala',
+          error: error.message 
+      });
+  }
+};
+
+exports.getWordsByRoom = async (req, res) => {
     try {
-      const { roomid } = req.body; // Ahora se obtiene del body
+      const { roomid } = req.body; 
       
       if (!roomid) {
         return res.status(400).json({ 
@@ -110,7 +195,7 @@ exports.getWordById = async (req, res) => {
       if (rows.length > 0) {
         return res.status(200).json(rows);
       } else {
-        return res.status(200).json([]); // Devuelve array vacío en lugar de objeto
+        return res.status(200).json([]); 
       }
     } catch (error) {
       console.error('Error al obtener palabras por sala:', error);
@@ -120,9 +205,8 @@ exports.getWordById = async (req, res) => {
         error: error.message 
       });
     }
-  };
+};
 
-  // Crear una nueva palabra
 exports.createWord = async (req, res) => {
     try {
       const { word, spanish, type, clue, simplepast, example, userId } = req.body;
@@ -159,9 +243,8 @@ exports.createWord = async (req, res) => {
         error: error.message 
       });
     }
-  },
+};
 
-  // Actualizar una palabra existente
 exports.updateWord = async (req, res) => {
     try {
       const { id, word, type, spanish, clue, simplepast, example } = req.body;
@@ -197,9 +280,8 @@ exports.updateWord = async (req, res) => {
         error: error.message 
       });
     }
-  },
+};
 
-  // Eliminar una palabra
 exports.deleteWord = async (req, res) => {
     try {
       const { id } = req.params;
@@ -235,97 +317,5 @@ exports.deleteWord = async (req, res) => {
         error: error.message 
       });
     }
-  }
+};
 
-exports.failsType = async (req, res) => {
-    try {
-        const { roomId } = req.params;
-        
-        if (!roomId) {
-            return res.status(400).json({ 
-                success: 0,
-                message: 'Se requiere el ID de la sala' 
-            });
-        }
-
-        const result = await db.query(
-            'SELECT words.*, room_has_word.typefails FROM words JOIN room_has_word ON words.id = room_has_word.word_id WHERE room_has_word.room_id = ? ORDER BY room_has_word.typefails DESC',
-            [roomId]
-        );
-        
-        if (result.length > 0) {
-            return res.status(200).json(result);
-        } else {
-            return res.status(200).json([]); // Devuelve array vacío en lugar de objeto
-        }
-    } catch (error) {
-        console.error('Error al obtener palabras por sala:', error);
-        return res.status(500).json({ 
-            success: 0,
-            message: 'Error al obtener palabras por sala',
-            error: error.message 
-        });
-    }
-}
-
-exports.failsPast = async (req, res) => {
-    try {
-        const { roomId } = req.params;
-        
-        if (!roomId) {
-            return res.status(400).json({ 
-                success: 0,
-                message: 'Se requiere el ID de la sala' 
-            });
-        }
-
-        const result = await db.query(
-            'SELECT words.*, room_has_word.pastfails FROM words JOIN room_has_word ON words.id = room_has_word.word_id WHERE room_has_word.room_id = ? ORDER BY room_has_word.pastfails DESC',
-            [roomId]
-        );
-        
-        if (result.length > 0) {
-            return res.status(200).json(result);
-        } else {
-            return res.status(200).json([]); // Devuelve array vacío en lugar de objeto
-        }
-    } catch (error) {
-        console.error('Error al obtener palabras por sala:', error);
-        return res.status(500).json({ 
-            success: 0,
-            message: 'Error al obtener palabras por sala',
-            error: error.message 
-        });
-    }
-}
-
-exports.getInactiveWords = async (req, res) => {
-    try {
-        const { roomId } = req.params;
-        
-        if (!roomId) {
-            return res.status(400).json({ 
-                success: 0,
-                message: 'Se requiere el ID de la sala' 
-            });
-        }
-
-        const result = await db.query(
-            'SELECT words.*, room_has_word.used FROM words JOIN room_has_word ON words.id = room_has_word.word_id WHERE room_has_word.room_id = ? ORDER BY room_has_word.used ASC',
-            [roomId]
-        );
-        
-        if (result.length > 0) {
-            return res.status(200).json(result);
-        } else {
-            return res.status(200).json([]); // Devuelve array vacío en lugar de objeto
-        }
-    } catch (error) {
-        console.error('Error al obtener palabras por sala:', error);
-        return res.status(500).json({ 
-            success: 0,
-            message: 'Error al obtener palabras por sala',
-            error: error.message 
-        });
-    }
-}

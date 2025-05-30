@@ -1,4 +1,3 @@
-// controllers/wordController.js
 const db = require('../config/db');
 
 exports.getAllLists = async (req, res) => {
@@ -6,7 +5,6 @@ exports.getAllLists = async (req, res) => {
   try {
     const rows = await db.query('SELECT * FROM lists WHERE user_id = ?', [userId]);
     
-    // Mejor respuesta cuando no hay listas
     if (rows.length === 0) {
       return res.json({
         success: true,
@@ -31,35 +29,14 @@ exports.getAllLists = async (req, res) => {
   }
 }
 
-exports.getAllListsIds = async (req, res) => {
-    const listId = req.query.listId;
-    try {
-      const words = await db.query(
-        'SELECT word_id FROM list_has_word WHERE list_id = ?',
-        [listId]
-    );
-    res.json(words);
-    } catch (error) {
-      console.error('Error al obtener palabras de la lista:', error);
-      return res.status(500).json({ 
-        success: 0,
-        message: 'Error al obtener palabras de la lista',
-        error: error.message 
-      });
-    }
-},
-
 exports.getListById = async (req, res) => {
   try {
-    console.log("Query params recibidos:", req.query); // Debug
-    
     const listId = req.query.listId;
     
     if (!listId) {
       return res.status(400).json({ error: "Se requiere listId" });
     }
 
-    // Ejemplo de consulta - ajusta según tu esquema de BD
     const query = `
       SELECT * FROM lists 
       WHERE id = ? 
@@ -110,6 +87,62 @@ exports.getWordsByList = async (req, res) => {
     }
 },
 
+
+exports.getAllListsIds = async (req, res) => {
+  const listId = req.query.listId;
+  try {
+    const words = await db.query(
+      'SELECT word_id FROM list_has_word WHERE list_id = ?',
+      [listId]
+  );
+  res.json(words);
+  } catch (error) {
+    console.error('Error al obtener palabras de la lista:', error);
+    return res.status(500).json({ 
+      success: 0,
+      message: 'Error al obtener palabras de la lista',
+      error: error.message 
+    });
+  }
+},
+
+exports.checkWord = async (req, res) => {
+  try {
+      const wordId = req.query.wordId;
+      
+      if (!wordId || isNaN(wordId)) {
+          return res.status(400).json({ 
+              success: false,
+              message: 'ID de palabra inválido' 
+          });
+      }
+
+      const listWords = await db.query(`
+          SELECT l.id, l.listname 
+          FROM lists l
+          JOIN list_has_word lhw ON l.id = lhw.list_id
+          WHERE lhw.word_id = ?
+      `, [wordId]);
+
+      res.json({ 
+          success: true,
+          inUse: listWords.length > 0,
+          usageCount: listWords.length,
+          lists: listWords,
+          message: listWords.length > 0
+              ? 'La palabra está siendo usada en listas'
+              : 'La palabra no está en uso'
+      });
+
+  } catch (error) {
+      console.error('Error al verificar palabra:', error);
+      res.status(500).json({ 
+          success: false,
+          message: 'Error interno al verificar palabra' 
+      });
+  }
+},
+
 exports.addWords = async (req, res) => {
   try {
     const { listId, wordIds } = req.body;
@@ -121,7 +154,6 @@ exports.addWords = async (req, res) => {
       });
     }
 
-    // Verificar que hay palabras para agregar
     if (wordIds.length === 0) {
       return res.status(400).json({ 
         success: 0,
@@ -129,13 +161,10 @@ exports.addWords = async (req, res) => {
       });
     }
 
-    // Crear placeholders dinámicos para cada par de valores
     const placeholders = wordIds.map(() => '(?, ?)').join(', ');
     
-    // Aplanar los valores en un solo array
     const flatValues = wordIds.flatMap(wordId => [parseInt(listId), parseInt(wordId)]);
     
-    // Usar la sintaxis explícita que funciona con todas las configuraciones
     const result = await db.query(
       `INSERT INTO list_has_word (list_id, word_id) VALUES ${placeholders}`,
       flatValues
@@ -155,7 +184,6 @@ exports.addWords = async (req, res) => {
   } catch (error) {
     console.error('Error al agregar palabras:', error);
     
-    // Manejar error de duplicados si existe la restricción UNIQUE
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ 
         success: 0,
@@ -169,14 +197,12 @@ exports.addWords = async (req, res) => {
       error: error.message 
     });
   }
-}
+},
 
-  // Crear una nueva lista
-  exports.createList = async (req, res) => {
+exports.createList = async (req, res) => {
     try {
         const { listName, description, userId } = req.body;
 
-        // Validación de datos
         if (!listName || !description || !userId) {
             return res.status(400).json({
                 success: 0,
@@ -184,13 +210,10 @@ exports.addWords = async (req, res) => {
             });
         }
 
-        // Modificar la consulta para manejar correctamente el resultado
         const result = await db.query(
             'INSERT INTO lists (listname, description, user_id) VALUES (?, ?, ?)',
             [listName, description, userId]
         );
-
-        // Verificar el resultado según tu driver de base de datos
         if (result && result.affectedRows) {
             return res.status(201).json({ 
                 success: 1,
@@ -213,7 +236,6 @@ exports.addWords = async (req, res) => {
     }
 },
 
-  // Actualizar una lista existente
 exports.updateList = async (req, res) => {
     try {
       const { id, listName, description } = req.body;
@@ -251,7 +273,6 @@ exports.updateList = async (req, res) => {
     }
 },
 
-  // Eliminar una lista
 exports.deleteList = async (req, res) => {
     try {
       const { id } = req.params;
@@ -286,44 +307,5 @@ exports.deleteList = async (req, res) => {
         message: 'Error al eliminar lista',
         error: error.message 
       });
-    }
-  }
-
-  exports.checkWord = async (req, res) => {
-    try {
-        const wordId = req.query.wordId;
-        
-        // Validar ID
-        if (!wordId || isNaN(wordId)) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'ID de palabra inválido' 
-            });
-        }
-
-        // Verificar uso en listas
-        const listWords = await db.query(`
-            SELECT l.id, l.listname 
-            FROM lists l
-            JOIN list_has_word lhw ON l.id = lhw.list_id
-            WHERE lhw.word_id = ?
-        `, [wordId]);
-
-        res.json({ 
-            success: true,
-            inUse: listWords.length > 0,
-            usageCount: listWords.length,
-            lists: listWords, // Listas que contienen esta palabra
-            message: listWords.length > 0
-                ? 'La palabra está siendo usada en listas'
-                : 'La palabra no está en uso'
-        });
-
-    } catch (error) {
-        console.error('Error al verificar palabra:', error);
-        res.status(500).json({ 
-            success: false,
-            message: 'Error interno al verificar palabra' 
-        });
     }
 }

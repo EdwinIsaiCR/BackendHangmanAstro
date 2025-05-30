@@ -1,4 +1,3 @@
-// Controlador para la tabla arenagame
 const db = require('../config/db');
 
 exports.insertarJuego = async (req, res) => {
@@ -21,12 +20,10 @@ exports.insertarJuego = async (req, res) => {
   }
 },
 
-// Crear un nuevo juego (solo con el nombre del jugador)
 exports.nuevoJuego = async (req, res) => {
   try {
     const { nombre } = req.body;
     
-    // Consulta actualizada que incluye totaltime con valor 0
     await db.query(
       `INSERT INTO arenagame(
         player, 
@@ -50,17 +47,14 @@ exports.nuevoJuego = async (req, res) => {
       success: 0,
       message: 'Error al crear nuevo juego',
       error: error.message,
-      sql: error.sql  // Para debugging adicional
+      sql: error.sql  
     });
   }
 },
-
-// Finalizar un juego
 exports.finalizarJuego = async (req, res) => {
   try {
     const { id, puntos, rindio } = req.body;
     
-    // Actualizar el registro con los datos finales
     await db.query(
       `UPDATE arenagame SET 
         score = ?, 
@@ -81,16 +75,12 @@ exports.finalizarJuego = async (req, res) => {
   }
 },
 
-// Obtener la tabla general
 exports.obtenerTablaGeneral = async (req, res) => {
   try {
-    // Obtener todos los registros ordenados por puntuación y tiempo
     const tabla = await db.query(
       "SELECT * FROM arenagame ORDER by score DESC, totaltime ASC"
     );
 
-    console.log(tabla);
-    
     if (tabla.length > 0) {
       return res.status(200).json(tabla);
     } else {
