@@ -11,11 +11,15 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 app.use(cors({
-  origin: ['https://hangman-astro.vercel.app', 'http://localhost:4321'],
+  origin: [
+    'https://hangman-astro.vercel.app', 
+    'http://localhost:4321',
+    'https://hangman-astro.vercel.app'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-  exposedHeaders: ['Set-Cookie']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'Origin', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Set-Cookie', 'Date', 'ETag']
 }));
 
 app.use((req, res, next) => {
@@ -44,8 +48,8 @@ const sessionConfig = {
     maxAge: 24 * 60 * 60 * 1000,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     domain: process.env.NODE_ENV === 'production' 
-    ? process.env.COOKIE_DOMAIN // ej: '.tu-dominio.com'
-    : undefined // localhost en desarrollo
+      ? 'hangman-astro.vercel.app' // o tu dominio específico
+      : undefined
   }
 };
 
