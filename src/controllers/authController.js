@@ -22,6 +22,18 @@ exports.login = async (req, res) => {
     // Guardar información del usuario en la sesión
     req.session.userId = user.id;
     req.session.userRole = user.role;
+
+    req.session.save((err) => {
+      if (err) {
+        console.error('Error guardando sesión:', err);
+        return res.status(500).json({ success: false, message: 'Error interno' });
+      }
+      
+      console.log('✅ Sesión creada exitosamente:', {
+        sessionId: req.sessionID,
+        userId: user.id
+      });
+    });
     
     // Datos básicos que enviaremos al frontend
     const userData = {
@@ -116,31 +128,39 @@ exports.register = async (req, res) => {
 };
 
 exports.logout = (req, res) => {
-  console.log('=== LOGOUT INICIADO ===');
+  console.log('=== LOGOUT DETALLADO ===');
   console.log('Session ID:', req.sessionID);
-  console.log('User ID:', req.session?.userId);
-  console.log('Cookies recibidas:', req.headers.cookie);
-  console.log('Method:', req.method);
-  console.log('Content-Type:', req.headers['content-type']);
+  console.log('Cookie header:', req.get('cookie'));
+  console.log('User ID actual:', req.session?.userId);
+  console.log('Session completa:', JSON.stringify(req.session, null, 2));
+  console.log('========================');
   
-  // VALIDAR QUE TENEMOS UNA SESIÓN ACTIVA
+  // Verificar que hay una sesión válida
   if (!req.session || !req.session.userId) {
-    console.log('⚠️  No hay sesión activa para cerrar');
+    console.log('⚠️ No hay sesión activa para cerrar');
+    
+    // Limpiar cualquier cookie que pueda existir
+    res.clearCookie('connect.sid', {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    });
+    
     return res.status(401).json({ 
       success: false, 
-      message: 'No hay sesión activa',
+      message: 'No hay sesión activa para cerrar',
       debug: {
         sessionExists: !!req.session,
         userId: req.session?.userId,
-        sessionId: req.sessionID
+        sessionId: req.sessionID,
+        cookieReceived: !!req.get('cookie')
       }
     });
   }
   
   const userIdToLogout = req.session.userId;
-  const sessionIdToDestroy = req.sessionID;
   console.log(`🔓 Cerrando sesión para usuario: ${userIdToLogout}`);
-  console.log(`🔓 Session ID a destruir: ${sessionIdToDestroy}`);
   
   // Destruir sesión
   req.session.destroy((err) => {
@@ -148,27 +168,26 @@ exports.logout = (req, res) => {
       console.error('❌ Error al destruir sesión:', err);
       return res.status(500).json({ 
         success: false, 
-        message: 'Error interno al cerrar sesión' 
+        message: 'Error interno al cerrar sesión',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
       });
     }
     
-    // Configurar opciones de cookie para eliminar
+    // Limpiar cookie
     const cookieOptions = {
       path: '/',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     };
     
-    // Limpiar cookies
+    if (process.env.NODE_ENV === 'production' && process.env.COOKIE_DOMAIN) {
+      cookieOptions.domain = process.env.COOKIE_DOMAIN;
+    }
+    
     res.clearCookie('connect.sid', cookieOptions);
     
-    // También intentar sin opciones por si acaso
-    res.clearCookie('connect.sid');
-    
     console.log(`✅ Sesión cerrada exitosamente para usuario: ${userIdToLogout}`);
-    console.log(`✅ Session ID destruido: ${sessionIdToDestroy}`);
     
     res.json({ 
       success: true, 

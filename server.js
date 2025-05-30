@@ -9,6 +9,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+
 app.use(cors({
   origin: ['https://hangman-astro.vercel.app', 'http://localhost:4321'],
   credentials: true,
@@ -42,28 +43,47 @@ const sessionConfig = {
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost' // Solo en desarrollo
-  },
-  rolling: false,
-  unset: 'destroy'
+    domain: process.env.NODE_ENV === 'production' 
+    ? process.env.COOKIE_DOMAIN // ej: '.tu-dominio.com'
+    : undefined // localhost en desarrollo
+  }
 };
 
 app.use(session(sessionConfig));
 
-app.get('/api/check-session', (req, res) => {
-  console.log('=== CHECK SESSION ===');
+app.use((req, res, next) => {
+  console.log('=== REQUEST DEBUG ===');
+  console.log('Method:', req.method);
+  console.log('Path:', req.path);
+  console.log('Origin:', req.get('origin'));
+  console.log('Cookie header:', req.get('cookie'));
   console.log('Session ID:', req.sessionID);
+  console.log('User ID en sesión:', req.session?.userId);
+  console.log('Headers importantes:', {
+    'content-type': req.get('content-type'),
+    'user-agent': req.get('user-agent'),
+    'referer': req.get('referer')
+  });
+  console.log('==================');
+  next();
+});
+
+app.get('/api/check-session', (req, res) => {
+  console.log('=== CHECK SESSION DETALLADO ===');
+  console.log('Session ID:', req.sessionID);
+  console.log('Cookie recibida:', req.get('cookie'));
+  console.log('Session object:', JSON.stringify(req.session, null, 2));
   console.log('User ID:', req.session?.userId);
-  console.log('Role:', req.session?.userRole);
-  console.log('Session data:', JSON.stringify(req.session, null, 2));
-  console.log('Cookies:', req.headers.cookie);
-  console.log('===================');
+  console.log('User Role:', req.session?.userRole);
+  console.log('Session regenerated:', !!req.session.regenerate);
+  console.log('==============================');
   
   if (req.session?.userId) {
     res.json({ 
       isLoggedIn: true,
       userId: req.session.userId,
       userRole: req.session.userRole,
+      email: req.session.email,
       sessionId: req.sessionID,
       timestamp: new Date().toISOString()
     });
@@ -71,6 +91,7 @@ app.get('/api/check-session', (req, res) => {
     res.json({ 
       isLoggedIn: false,
       sessionId: req.sessionID,
+      hasSession: !!req.session,
       timestamp: new Date().toISOString()
     });
   }
@@ -94,6 +115,22 @@ app.post('/api/auth/clear-all-sessions', (req, res) => {
   // });
   
   res.json({ success: true, message: 'Funcionalidad no implementada' });
+});
+
+app.get('/api/test-cookies', (req, res) => {
+  console.log('=== TEST COOKIES ===');
+  console.log('Headers:', req.headers);
+  console.log('Cookies parseadas:', req.cookies);
+  console.log('Session:', req.session);
+  console.log('==================');
+  
+  res.json({
+    receivedCookies: req.get('cookie'),
+    parsedCookies: req.cookies,
+    sessionId: req.sessionID,
+    hasSession: !!req.session,
+    sessionData: req.session
+  });
 });
 
 const userRoutes = require('./src/routes/userRoutes');
