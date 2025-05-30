@@ -38,38 +38,6 @@ const sessionConfig = {
 
 app.use(session(sessionConfig));
 
-// Middleware para persistir userId en sesión
-app.use((req, res, next) => {
-  // Solo regenerar sesión si no existe userId
-  if (!req.session.userId && req.path !== '/api/auth/login') {
-    req.session.regenerate(err => {
-      if (err) return next(err);
-      next();
-    });
-  } else {
-    next();
-  }
-});
-
-
-
-app.use((req, res, next) => {
-  console.log('=== REQUEST DEBUG ===');
-  console.log('Method:', req.method);
-  console.log('Path:', req.path);
-  console.log('Origin:', req.get('origin'));
-  console.log('Cookie header:', req.get('cookie'));
-  console.log('Session ID:', req.sessionID);
-  console.log('User ID en sesión:', req.session?.userId);
-  console.log('Headers importantes:', {
-    'content-type': req.get('content-type'),
-    'user-agent': req.get('user-agent'),
-    'referer': req.get('referer')
-  });
-  console.log('==================');
-  next();
-});
-
 app.get('/api/check-session', (req, res) => {
   console.log('Sesión actual:', req.session);
   
@@ -92,41 +60,6 @@ app.get('/api/check-session', (req, res) => {
   });
 });
 
-// Endpoint para limpiar todas las sesiones (útil para desarrollo)
-app.post('/api/auth/clear-all-sessions', (req, res) => {
-  if (process.env.NODE_ENV !== 'development') {
-    return res.status(403).json({ 
-      success: false, 
-      message: 'Solo disponible en desarrollo' 
-    });
-  }
-  
-  // Si usas express-session con store, puedes limpiar todas las sesiones
-  // req.sessionStore.clear((err) => {
-  //   if (err) {
-  //     return res.status(500).json({ success: false, message: 'Error al limpiar sesiones' });
-  //   }
-  //   res.json({ success: true, message: 'Todas las sesiones limpiadas' });
-  // });
-  
-  res.json({ success: true, message: 'Funcionalidad no implementada' });
-});
-
-app.get('/api/test-cookies', (req, res) => {
-  console.log('=== TEST COOKIES ===');
-  console.log('Headers:', req.headers);
-  console.log('Cookies parseadas:', req.cookies);
-  console.log('Session:', req.session);
-  console.log('==================');
-  
-  res.json({
-    receivedCookies: req.get('cookie'),
-    parsedCookies: req.cookies,
-    sessionId: req.sessionID,
-    hasSession: !!req.session,
-    sessionData: req.session
-  });
-});
 
 const userRoutes = require('./src/routes/userRoutes');
 const wordRoutes = require('./src/routes/wordRoutes');

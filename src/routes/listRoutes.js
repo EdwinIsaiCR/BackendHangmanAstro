@@ -10,6 +10,7 @@ router.get('/checkWord', listController.checkWord);
 router.post('/words', listController.addWords);
 router.post('/', listController.createList);
 router.put('/', listController.updateList);
+router.delete('/words', listController.removeWordFromList);
 router.delete('/:id', listController.deleteList);
 
 module.exports = router;

@@ -161,43 +161,46 @@ exports.addWords = async (req, res) => {
       });
     }
 
+    // Primero, verificar qué palabras ya están en la lista
+    const existingWords = await db.query(
+      `SELECT word_id FROM list_has_word WHERE list_id = ? AND word_id IN (?)`,
+      [listId, wordIds]
+    );
+
+    const existingWordIds = existingWords.map(row => row.word_id);
+    const newWordIds = wordIds.filter(id => !existingWordIds.includes(parseInt(id)));
+
+    if (newWordIds.length === 0) {
+      return res.status(400).json({ 
+        success: 0,
+        message: 'Todas las palabras seleccionadas ya están en la lista' 
+      });
+    }
+
+    // Insertar solo las palabras que no existen
     const placeholders = wordIds.map(() => '(?, ?)').join(', ');
-    
     const flatValues = wordIds.flatMap(wordId => [parseInt(listId), parseInt(wordId)]);
-    
+
     const result = await db.query(
-      `INSERT INTO list_has_word (list_id, word_id) VALUES ${placeholders}`,
+      `INSERT IGNORE INTO list_has_word (list_id, word_id) VALUES ${placeholders}`,
       flatValues
     );
 
-    if (result.affectedRows) {
-      return res.status(200).json({ 
-        success: 1,
-        message: `${result.affectedRows} palabras agregadas exitosamente` 
-      });
-    } else {
-      return res.status(400).json({ 
-        success: 0,
-        message: 'No se pudo agregar las palabras' 
-      });
-    }
+    return res.status(200).json({ 
+      success: 1,
+      message: `${result.affectedRows} palabras agregadas exitosamente`,
+      skipped: wordIds.length - result.affectedRows
+    });
+
   } catch (error) {
     console.error('Error al agregar palabras:', error);
-    
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ 
-        success: 0,
-        message: 'Algunas palabras ya están en la lista' 
-      });
-    }
-    
     return res.status(500).json({ 
       success: 0,
       message: 'Error al agregar palabras',
       error: error.message 
     });
   }
-},
+}
 
 exports.createList = async (req, res) => {
     try {
@@ -308,4 +311,46 @@ exports.deleteList = async (req, res) => {
         error: error.message 
       });
     }
-}
+},
+
+exports.removeWordFromList = async (req, res) => {
+  try {
+    const { listId, wordId } = req.query;
+
+    if (!listId || !wordId) {
+      return res.status(400).json({ 
+        success: 0,
+        message: 'Se requiere el ID de la lista y el ID de la palabra' 
+      });
+    }
+
+    const result = await db.query(
+      `DELETE FROM list_has_word WHERE list_id = ? AND word_id = ?`,
+      [listId, wordId]
+    );
+
+    const result2 = await db.query(
+      `DELETE FROM room_has_word WHERE word_id = ?`,
+      [wordId]
+    );
+
+    if (result.affectedRows || result2.affectedRows) {
+      return res.status(200).json({ 
+        success: 1,
+        message: 'Palabra eliminada de la lista exitosamente' 
+      });
+    } else {
+      return res.status(404).json({ 
+        success: 0,
+        message: 'La palabra no estaba en la lista' 
+      });
+    }
+  } catch (error) {
+    console.error('Error al eliminar palabra de la lista:', error);
+    return res.status(500).json({ 
+      success: 0,
+      message: 'Error al eliminar palabra de la lista',
+      error: error.message 
+    });
+  }
+};
