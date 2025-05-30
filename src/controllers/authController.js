@@ -20,18 +20,17 @@ exports.login = async (req, res) => {
     console.log(user);
 
     // Guardar información del usuario en la sesión
-    // Crear sesión
-    req.session.userId = user.id;
-    req.session.email = user.email;
-
-    // 4. Configurar cookie manualmente ANTES de enviar la respuesta
-    res.cookie('hangman.sid', req.sessionID, {
-      secure: process.env.NODE_ENV === 'production',
+    const cookieOptions = {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
+      path: '/',
+      secure: req.secure || process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       domain: process.env.NODE_ENV === 'production' ? '.up.railway.app' : 'localhost'
-    });
+    };
+
+    req.session.userId = user.id;
+    res.cookie('hangman.sid', req.sessionID, cookieOptions);
 
 
     console.log(req.session);
@@ -140,22 +139,23 @@ exports.logout = (req, res) => {
     });
   }
 
-  // Destruir sesión usando el sessionId
-  req.sessionStore.destroy(sessionId, (err) => {
+  const cookieOptions = {
+    path: '/',
+    httpOnly: true,
+    secure: req.secure || process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    domain: process.env.NODE_ENV === 'production' ? '.up.railway.app' : 'localhost'
+  };
+
+  // Destruir sesión
+  req.session.destroy(err => {
     if (err) {
-      console.error('Error al destruir sesión:', err);
+      console.error('Error destroying session:', err);
       return res.status(500).json({ success: false, message: 'Error al cerrar sesión' });
     }
-    
-    // Limpiar cookie si existe
-    res.clearCookie('hangman.sid', {
-      path: '/',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      domain: '.up.railway.app'
-    });
-    
+
+    // Limpiar cookie (opciones deben coincidir con las de creación)
+    res.clearCookie('hangman.sid', cookieOptions);
     res.json({ success: true, message: 'Sesión cerrada correctamente' });
   });
 };
