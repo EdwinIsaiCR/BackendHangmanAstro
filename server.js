@@ -41,15 +41,13 @@ const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'brains908',
   resave: false,
   saveUninitialized: false,
-  name: 'connect.sid',
-  cookie: { 
-    secure: process.env.NODE_ENV === 'production',
+  name: 'hangman.sid', // Cambia el nombre de la cookie
+  cookie: {
+    secure: false, // false en desarrollo, true en producción
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    domain: process.env.NODE_ENV === 'production' 
-      ? 'hangman-astro.vercel.app' // o tu dominio específico
-      : undefined
+    sameSite: 'lax', // 'lax' en desarrollo, 'none' en producción
+    // domain: undefined // No establecer domain en desarrollo
   }
 };
 
