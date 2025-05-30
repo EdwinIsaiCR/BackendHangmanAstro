@@ -20,20 +20,18 @@ exports.login = async (req, res) => {
     console.log(user);
 
     // Guardar información del usuario en la sesión
-    req.session.userId = user.id;
-    req.session.userRole = user.role;
+// Crear sesión
+req.session.userId = user.id;
+req.session.userRole = user.role;
+req.session.email = user.email;
 
-    req.session.save((err) => {
-      if (err) {
-        console.error('Error guardando sesión:', err);
-        return res.status(500).json({ success: false, message: 'Error interno' });
-      }
-      
-      console.log('✅ Sesión creada exitosamente:', {
-        sessionId: req.sessionID,
-        userId: user.id
-      });
-    });
+// Configurar cookie de sesión
+res.cookie('connect.sid', req.sessionID, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: 24 * 60 * 60 * 1000
+});
     
     // Datos básicos que enviaremos al frontend
     const userData = {
