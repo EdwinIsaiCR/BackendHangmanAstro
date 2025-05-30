@@ -13,7 +13,7 @@ exports.login = async (req, res) => {
     // Verificar credenciales en la base de datos
     const users = await db.query('SELECT * FROM users WHERE email = ? AND password = ?', [email, password]);
     
-    if (users === null) {
+    if (users === undefined || users.length === 0) {
       return res.status(401).json({ success: false, message: 'Email o contraseña incorrectos' });
     }
 
