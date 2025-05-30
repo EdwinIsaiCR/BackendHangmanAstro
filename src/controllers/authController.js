@@ -22,16 +22,19 @@ exports.login = async (req, res) => {
     // Guardar información del usuario en la sesión
     // Crear sesión
     req.session.userId = user.id;
-    req.session.userRole = user.role;
     req.session.email = user.email;
 
-    // Configurar cookie de sesión
+    // 4. Configurar cookie manualmente ANTES de enviar la respuesta
     res.cookie('hangman.sid', req.sessionID, {
-      httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000,
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 24 * 60 * 60 * 1000
+      domain: process.env.NODE_ENV === 'production' ? '.up.railway.app' : 'localhost'
     });
+
+
+    console.log(req.session);
 
     // Datos básicos que enviaremos al frontend
     const userData = {
@@ -126,73 +129,34 @@ exports.register = async (req, res) => {
 };
 
 exports.logout = (req, res) => {
-  console.log('=== LOGOUT DETALLADO ===');
-  console.log('Session ID:', req.sessionID);
-  console.log('Cookie header:', req.get('cookie'));
-  console.log('User ID actual:', req.session?.userId);
-  console.log('Session completa:', JSON.stringify(req.session, null, 2));
-  console.log('========================');
-
-  // Verificar que hay una sesión válida
-  if (!req.session || !req.session.userId) {
-    console.log('⚠️ No hay sesión activa para cerrar');
-
-    // Limpiar cualquier cookie que pueda existir
-    res.clearCookie('connect.sid', {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-    });
-
-    return res.status(401).json({
-      success: false,
-      message: 'No hay sesión activa para cerrar',
-      debug: {
-        sessionExists: !!req.session,
-        userId: req.session?.userId,
-        sessionId: req.sessionID,
-        cookieReceived: !!req.get('cookie')
-      }
+  // Opción 1: Verificar por cookie (si existe)
+  // Opción 2: Verificar por header de autorización
+  const sessionId = req.sessionID || req.headers['x-session-id'];
+  
+  if (!sessionId) {
+    return res.status(401).json({ 
+      success: false, 
+      message: 'No hay sesión activa para cerrar'
     });
   }
 
-  const userIdToLogout = req.session.userId;
-  console.log(`🔓 Cerrando sesión para usuario: ${userIdToLogout}`);
-
-  // Destruir sesión
-  req.session.destroy((err) => {
+  // Destruir sesión usando el sessionId
+  req.sessionStore.destroy(sessionId, (err) => {
     if (err) {
-      console.error('❌ Error al destruir sesión:', err);
-      return res.status(500).json({
-        success: false,
-        message: 'Error interno al cerrar sesión',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined
-      });
+      console.error('Error al destruir sesión:', err);
+      return res.status(500).json({ success: false, message: 'Error al cerrar sesión' });
     }
-
-    // Limpiar cookie
-    const cookieOptions = {
+    
+    // Limpiar cookie si existe
+    res.clearCookie('hangman.sid', {
       path: '/',
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-    };
-
-    if (process.env.NODE_ENV === 'production' && process.env.COOKIE_DOMAIN) {
-      cookieOptions.domain = process.env.COOKIE_DOMAIN;
-    }
-
-    res.clearCookie('connect.sid', cookieOptions);
-
-    console.log(`✅ Sesión cerrada exitosamente para usuario: ${userIdToLogout}`);
-
-    res.json({
-      success: true,
-      message: 'Sesión cerrada correctamente',
-      loggedOutUserId: userIdToLogout,
-      timestamp: new Date().toISOString()
+      secure: true,
+      sameSite: 'none',
+      domain: '.up.railway.app'
     });
+    
+    res.json({ success: true, message: 'Sesión cerrada correctamente' });
   });
 };
 

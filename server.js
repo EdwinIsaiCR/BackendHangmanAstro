@@ -10,49 +10,48 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
+// Configuración mejorada de CORS
 app.use(cors({
-  origin: [
-    'https://hangman-astro.vercel.app', 
-    'http://localhost:4321'
-  ],
+  origin: ['http://localhost:4321', 'https://hangman-astro.vercel.app'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'Origin', 'X-Requested-With', 'Accept'],
-  exposedHeaders: ['set-Cookie']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['set-cookie']
 }));
 
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  console.log('Headers recibidos:', {
-    cookie: req.headers.cookie,
-    'user-agent': req.headers['user-agent']?.substring(0, 50) + '...',
-    origin: req.headers.origin
-  });
-  
-  if (req.session) {
-    console.log('Session ID:', req.sessionID);
-    console.log('User ID en sesión:', req.session.userId);
-  }
-  next();
-});
-
+// Configuración mejorada de sesión
 const sessionConfig = {
-  secret: process.env.SESSION_SECRET || 'brains908',
+  secret: process.env.SESSION_SECRET || 'fallback-secret',
   resave: false,
   saveUninitialized: false,
   name: 'hangman.sid',
   cookie: {
-    secure: true, // Siempre true en Railway (HTTPS)
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000,
-    sameSite: 'none', // Necesario para cross-site
+    maxAge: 24 * 60 * 60 * 1000, // 1 día
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     domain: process.env.NODE_ENV === 'production' 
-      ? '.up.railway.app' // Dominio principal
-      : undefined // Localhost
+      ? '.up.railway.app' 
+      : 'localhost' // Dominio explícito para desarrollo
   }
 };
 
 app.use(session(sessionConfig));
+
+// Middleware para persistir userId en sesión
+app.use((req, res, next) => {
+  // Solo regenerar sesión si no existe userId
+  if (!req.session.userId && req.path !== '/api/auth/login') {
+    req.session.regenerate(err => {
+      if (err) return next(err);
+      next();
+    });
+  } else {
+    next();
+  }
+});
+
+
 
 app.use((req, res, next) => {
   console.log('=== REQUEST DEBUG ===');
@@ -72,32 +71,25 @@ app.use((req, res, next) => {
 });
 
 app.get('/api/check-session', (req, res) => {
-  console.log('=== CHECK SESSION DETALLADO ===');
-  console.log('Session ID:', req.sessionID);
-  console.log('Cookie recibida:', req.get('cookie'));
-  console.log('Session object:', JSON.stringify(req.session, null, 2));
-  console.log('User ID:', req.session?.userId);
-  console.log('User Role:', req.session?.userRole);
-  console.log('Session regenerated:', !!req.session.regenerate);
-  console.log('==============================');
+  console.log('Sesión actual:', req.session);
   
-  if (req.session?.userId) {
-    res.json({ 
-      isLoggedIn: true,
-      userId: req.session.userId,
-      userRole: req.session.userRole,
-      email: req.session.email,
-      sessionId: req.sessionID,
-      timestamp: new Date().toISOString()
-    });
-  } else {
-    res.json({ 
+  if (!req.session.userId) {
+    return res.json({ 
       isLoggedIn: false,
-      sessionId: req.sessionID,
-      hasSession: !!req.session,
-      timestamp: new Date().toISOString()
+      sessionId: req.sessionID
     });
   }
+
+  // Actualizar tiempo de expiración
+  req.session.touch();
+  
+  res.json({
+    isLoggedIn: true,
+    userId: req.session.userId,
+    userRole: req.session.userRole,
+    email: req.session.email,
+    sessionId: req.sessionID
+  });
 });
 
 // Endpoint para limpiar todas las sesiones (útil para desarrollo)
