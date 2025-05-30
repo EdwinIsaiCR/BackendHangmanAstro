@@ -53,25 +53,47 @@ app.use(session(sessionConfig));
 app.get('/api/check-session', (req, res) => {
   console.log('=== CHECK SESSION ===');
   console.log('Session ID:', req.sessionID);
-  console.log('User ID:', req.session.userId);
-  console.log('Role:', req.session.userRole);
-  console.log('Toda la sesión:', JSON.stringify(req.session, null, 2));
+  console.log('User ID:', req.session?.userId);
+  console.log('Role:', req.session?.userRole);
+  console.log('Session data:', JSON.stringify(req.session, null, 2));
   console.log('Cookies:', req.headers.cookie);
   console.log('===================');
   
-  if (req.session.userId) {
+  if (req.session?.userId) {
     res.json({ 
       isLoggedIn: true,
       userId: req.session.userId,
       userRole: req.session.userRole,
-      sessionId: req.sessionID
+      sessionId: req.sessionID,
+      timestamp: new Date().toISOString()
     });
   } else {
     res.json({ 
       isLoggedIn: false,
-      sessionId: req.sessionID
+      sessionId: req.sessionID,
+      timestamp: new Date().toISOString()
     });
   }
+});
+
+// Endpoint para limpiar todas las sesiones (útil para desarrollo)
+app.post('/api/auth/clear-all-sessions', (req, res) => {
+  if (process.env.NODE_ENV !== 'development') {
+    return res.status(403).json({ 
+      success: false, 
+      message: 'Solo disponible en desarrollo' 
+    });
+  }
+  
+  // Si usas express-session con store, puedes limpiar todas las sesiones
+  // req.sessionStore.clear((err) => {
+  //   if (err) {
+  //     return res.status(500).json({ success: false, message: 'Error al limpiar sesiones' });
+  //   }
+  //   res.json({ success: true, message: 'Todas las sesiones limpiadas' });
+  // });
+  
+  res.json({ success: true, message: 'Funcionalidad no implementada' });
 });
 
 const userRoutes = require('./src/routes/userRoutes');

@@ -116,16 +116,17 @@ exports.register = async (req, res) => {
 };
 
 exports.logout = (req, res) => {
-  console.log('=== LOGOUT CON VALIDACIÓN ===');
+  console.log('=== LOGOUT INICIADO ===');
   console.log('Session ID:', req.sessionID);
-  console.log('User ID:', req.session.userId);
+  console.log('User ID:', req.session?.userId);
   console.log('Cookies recibidas:', req.headers.cookie);
-  console.log('Headers completos:', JSON.stringify(req.headers, null, 2));
+  console.log('Method:', req.method);
+  console.log('Content-Type:', req.headers['content-type']);
   
   // VALIDAR QUE TENEMOS UNA SESIÓN ACTIVA
   if (!req.session || !req.session.userId) {
     console.log('⚠️  No hay sesión activa para cerrar');
-    return res.json({ 
+    return res.status(401).json({ 
       success: false, 
       message: 'No hay sesión activa',
       debug: {
@@ -137,38 +138,43 @@ exports.logout = (req, res) => {
   }
   
   const userIdToLogout = req.session.userId;
+  const sessionIdToDestroy = req.sessionID;
   console.log(`🔓 Cerrando sesión para usuario: ${userIdToLogout}`);
+  console.log(`🔓 Session ID a destruir: ${sessionIdToDestroy}`);
   
-  // Método 1: Limpiar datos manualmente
-  req.session.userId = null;
-  req.session.userRole = null;
-  
-  // Método 2: Destruir sesión
+  // Destruir sesión
   req.session.destroy((err) => {
     if (err) {
       console.error('❌ Error al destruir sesión:', err);
       return res.status(500).json({ 
         success: false, 
-        message: 'Error al cerrar sesión' 
+        message: 'Error interno al cerrar sesión' 
       });
     }
     
-    // Método 3: Limpiar cookie
+    // Configurar opciones de cookie para eliminar
     const cookieOptions = {
       path: '/',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined
     };
     
+    // Limpiar cookies
     res.clearCookie('connect.sid', cookieOptions);
-    res.clearCookie('connect.sid'); // También sin opciones
+    
+    // También intentar sin opciones por si acaso
+    res.clearCookie('connect.sid');
     
     console.log(`✅ Sesión cerrada exitosamente para usuario: ${userIdToLogout}`);
+    console.log(`✅ Session ID destruido: ${sessionIdToDestroy}`);
+    
     res.json({ 
       success: true, 
       message: 'Sesión cerrada correctamente',
-      loggedOutUserId: userIdToLogout
+      loggedOutUserId: userIdToLogout,
+      timestamp: new Date().toISOString()
     });
   });
 };
