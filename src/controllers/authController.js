@@ -41,7 +41,7 @@ exports.login = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      hrsPlayed: user.hrsPlayed || '0 hrs'
+      hrsPlayed: user.hrsjugadas || '0 hrs'
     };
 
     res.json({
